@@ -1,0 +1,605 @@
+-- SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local Drawing = getgenv().Drawing or Drawing
+
+-- CONFIG — PREDICTION REMOVED | STRICT HEAD LOCK
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = Workspace.CurrentCamera
+local ADMIN_USER = "blox91moli100"
+local ANNOUNCE_SOUND_ID = "rbxassetid://138718776377217"
+local MIN_LOCK_HP = 8
+local TRIANGLE_THICKNESS = 2
+local AIM_SMOOTHNESS = 1 -- 1 = INSTANT LOCK, NO DELAY
+local AimPart = "Head" -- LOCKED TO HEAD ONLY
+local AimPartsList = {"Head"} -- REMOVED OTHER OPTIONS
+
+-- SCREEN GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Verity_GUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+-- MAIN FRAME
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 550, 0, 480)
+MainFrame.Position = UDim2.new(0.05, 0, 0.1, 0)
+MainFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+MainFrame.BorderColor3 = Color3.new(1, 1, 1)
+MainFrame.BorderSizePixel = 2
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+
+-- TITLE BAR
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.new(0, 0, 0)
+TitleBar.BorderColor3 = Color3.new(1, 1, 1)
+TitleBar.BorderSizePixel = 1
+TitleBar.Parent = MainFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 8)
+
+local TitleText = Instance.new("TextLabel", TitleBar)
+TitleText.Size = UDim2.new(0.75, 0, 1, 0)
+TitleText.Position = UDim2.new(0.02, 0, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "VERITY SYSTEM"
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextColor3 = Color3.new(1, 1, 1)
+TitleText.TextSize = 18
+
+-- MINIMIZE / CLOSE
+local MinBtn = Instance.new("TextButton", TitleBar)
+MinBtn.Size = UDim2.new(0, 32, 0, 32)
+MinBtn.Position = UDim2.new(0.82, 0, 0, 4)
+MinBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+MinBtn.BorderColor3 = Color3.new(1, 1, 1)
+MinBtn.Text = "-"
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+
+local CloseBtn = Instance.new("TextButton", TitleBar)
+CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+CloseBtn.Position = UDim2.new(0.91, 0, 0, 4)
+CloseBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+CloseBtn.BorderColor3 = Color3.new(1, 1, 1)
+CloseBtn.Text = "X"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+
+-- MINIMIZED BOX
+local MiniBox = Instance.new("TextButton", ScreenGui)
+MiniBox.Size = UDim2.new(0, 44, 0, 44)
+MiniBox.Position = MainFrame.Position
+MiniBox.BackgroundColor3 = Color3.new(0, 0, 0)
+MiniBox.BorderColor3 = Color3.new(1, 1, 1)
+MiniBox.Text = "V"
+MiniBox.Font = Enum.Font.GothamBlack
+MiniBox.TextColor3 = Color3.new(1, 1, 1)
+MiniBox.Visible = false
+MiniBox.Draggable = true
+Instance.new("UICorner", MiniBox).CornerRadius = UDim.new(0, 8)
+
+-- TARGET HUD
+local TargetHUD = Instance.new("Frame", ScreenGui)
+TargetHUD.Size = UDim2.new(0, 220, 0, 100)
+TargetHUD.Position = UDim2.new(0.75, 0, 0.1, 0)
+TargetHUD.BackgroundColor3 = Color3.new(0.08, 0.08, 0.08)
+TargetHUD.BorderColor3 = Color3.new(1, 1, 1)
+TargetHUD.BorderSizePixel = 1
+TargetHUD.Active = true
+TargetHUD.Draggable = true
+TargetHUD.Visible = false
+Instance.new("UICorner", TargetHUD).CornerRadius = UDim.new(0, 8)
+
+local AvatarImage = Instance.new("ImageLabel", TargetHUD)
+AvatarImage.Size = UDim2.new(0, 60, 0, 60)
+AvatarImage.Position = UDim2.new(0.05, 0, 0.2, 0)
+AvatarImage.BackgroundColor3 = Color3.new(0.12, 0.12, 0.12)
+AvatarImage.BorderColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", AvatarImage).CornerRadius = UDim.new(0, 6)
+
+local NameLabel = Instance.new("TextLabel", TargetHUD)
+NameLabel.Size = UDim2.new(0.65, 0, 0, 22)
+NameLabel.Position = UDim2.new(0.35, 0, 0.15, 0)
+NameLabel.BackgroundTransparency = 1
+NameLabel.Font = Enum.Font.GothamBold
+NameLabel.TextColor3 = Color3.new(1, 1, 1)
+NameLabel.TextSize = 14
+NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local StatusLabel = Instance.new("TextLabel", TargetHUD)
+StatusLabel.Size = UDim2.new(0.65, 0, 0, 20)
+StatusLabel.Position = UDim2.new(0.35, 0, 0.38, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Font = Enum.Font.GothamSemibold
+StatusLabel.TextColor3 = Color3.new(0, 1, 0)
+StatusLabel.Text = "ALIVE"
+StatusLabel.TextSize = 13
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local HealthLabel = Instance.new("TextLabel", TargetHUD)
+HealthLabel.Size = UDim2.new(0.65, 0, 0, 20)
+HealthLabel.Position = UDim2.new(0.35, 0, 0.58, 0)
+HealthLabel.BackgroundTransparency = 1
+HealthLabel.Font = Enum.Font.Gotham
+HealthLabel.TextColor3 = Color3.new(1, 1, 1)
+HealthLabel.Text = "HP: 100"
+HealthLabel.TextSize = 13
+HealthLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local DistanceLabel = Instance.new("TextLabel", TargetHUD)
+DistanceLabel.Size = UDim2.new(0.65, 0, 0, 20)
+DistanceLabel.Position = UDim2.new(0.35, 0, 0.78, 0)
+DistanceLabel.BackgroundTransparency = 1
+DistanceLabel.Font = Enum.Font.Gotham
+DistanceLabel.TextColor3 = Color3.new(1, 1, 1)
+DistanceLabel.Text = "DIST: 0m"
+DistanceLabel.TextSize = 13
+DistanceLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- SIDEBAR & CONTENT
+local SideBar = Instance.new("Frame", MainFrame)
+SideBar.Size = UDim2.new(0.35, 0, 1, -40)
+SideBar.Position = UDim2.new(0, 0, 0, 40)
+SideBar.BackgroundColor3 = Color3.new(0.03, 0.03, 0.03)
+SideBar.BorderColor3 = Color3.new(1, 1, 1)
+SideBar.BorderSizePixel = 1
+Instance.new("UICorner", SideBar).CornerRadius = UDim.new(0, 8)
+
+local ContentFrame = Instance.new("Frame", MainFrame)
+ContentFrame.Size = UDim2.new(0.65, 0, 1, -40)
+ContentFrame.Position = UDim2.new(0.35, 0, 0, 40)
+ContentFrame.BackgroundColor3 = Color3.new(0.06, 0.06, 0.06)
+ContentFrame.BorderColor3 = Color3.new(1, 1, 1)
+ContentFrame.BorderSizePixel = 1
+Instance.new("UICorner", ContentFrame).CornerRadius = UDim.new(0, 8)
+
+-- ANNOUNCE UI
+local AnnounceFrame = Instance.new("Frame", ScreenGui)
+AnnounceFrame.Size = UDim2.new(0, 400, 0, 50)
+AnnounceFrame.Position = UDim2.new(0.5, -200, 0.02, 0)
+AnnounceFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+AnnounceFrame.BorderColor3 = Color3.new(1, 1, 1)
+AnnounceFrame.BorderSizePixel = 2
+AnnounceFrame.Visible = false
+AnnounceFrame.BackgroundTransparency = 1
+AnnounceFrame.ZIndex = 1000
+Instance.new("UICorner", AnnounceFrame).CornerRadius = UDim.new(0, 6)
+
+local AnnounceText = Instance.new("TextLabel", AnnounceFrame)
+AnnounceText.Size = UDim2.new(1, -20, 1, -10)
+AnnounceText.Position = UDim2.new(0, 10, 0, 5)
+AnnounceText.BackgroundTransparency = 1
+AnnounceText.Text = ""
+AnnounceText.Font = Enum.Font.GothamBold
+AnnounceText.TextColor3 = Color3.new(1, 1, 1)
+AnnounceText.TextSize = 18
+AnnounceText.TextWrapped = true
+
+-- STATE VARIABLES
+local Tabs = {
+    {Name = "Main", Selected = true, AdminOnly = false},
+    {Name = "Misc", Selected = false, AdminOnly = false},
+    {Name = "Admin Panel", Selected = false, AdminOnly = true},
+    {Name = "Credits", Selected = false, AdminOnly = false}
+}
+local TabButtons = {}
+local CurrentTab = "Main"
+local AimlockEnabled = false
+local FOV = 160
+local Target = nil
+local TargetPlayer = nil
+local TargetHighlight = nil
+local TargetTriangles = {}
+
+-- FOV CIRCLE
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = false
+FOVCircle.Thickness = 2
+FOVCircle.Color = Color3.new(1, 1, 1)
+FOVCircle.Transparency = 0.7
+FOVCircle.Filled = false
+-- ANNOUNCE FUNCTION
+_G.ShowAnnouncement = function(message, duration)
+    duration = duration or 3
+    AnnounceText.Text = message or "No message"
+    local textSize = AnnounceText.TextBounds
+    AnnounceFrame.Size = UDim2.new(0, math.clamp(textSize.X + 40, 250, 700), 0, math.clamp(textSize.Y + 20, 40, 120))
+    AnnounceFrame.Position = UDim2.new(0.5, -AnnounceFrame.Size.X.Offset / 2, 0.02, 0)
+
+    local sound = Instance.new("Sound")
+    sound.SoundId = ANNOUNCE_SOUND_ID
+    sound.Volume = 1
+    sound.Parent = SoundService
+    sound:Play()
+    task.delay(2, function() sound:Destroy() end)
+
+    AnnounceFrame.Visible = true
+    local fadeIn = TweenService:Create(AnnounceFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0, BorderTransparency = 0})
+    fadeIn:Play()
+    task.delay(duration, function()
+        local fadeOut = TweenService:Create(AnnounceFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1, BorderTransparency = 1})
+        fadeOut:Play()
+        task.wait(0.3)
+        AnnounceFrame.Visible = false
+    end)
+end
+
+-- WALL CHECK REMOVED
+local function IsVisible() return true end
+
+-- AVATAR URL
+local function GetAvatarUrl(userId)
+    return string.format("https://www.roblox.com/headshot-thumbnail/image?userId=%d&width=420&height=420&format=png", userId)
+end
+
+-- CLEAN TRIANGLE FUNCTIONS
+local function ClearTriangles()
+    for _, triLines in ipairs(TargetTriangles) do
+        for _, line in ipairs(triLines) do
+            line:Remove()
+        end
+    end
+    TargetTriangles = {}
+end
+
+local function Draw3DTriangle(center, radius, rot)
+    local camRight = Camera.CFrame.RightVector
+    local camUp = Camera.CFrame.UpVector
+    local angles = {0, 2.0944, 4.1888}
+    local points = {}
+    for _, angle in ipairs(angles) do
+        local offset = (math.cos(angle + rot) * camRight + math.sin(angle + rot) * camUp) * radius
+        table.insert(points, center + offset)
+    end
+    local lines = {}
+    for i = 1, 3 do
+        local p1 = Camera:WorldToViewportPoint(points[i])
+        local p2 = Camera:WorldToViewportPoint(points[i % 3 + 1])
+        if p1.Z > 0 and p2.Z > 0 then
+            local line = Drawing.new("Line")
+            line.Color = Color3.new(1, 0, 0)
+            line.Thickness = TRIANGLE_THICKNESS
+            line.Transparency = 0.7
+            line.From = Vector2.new(p1.X, p1.Y)
+            line.To = Vector2.new(p2.X, p2.Y)
+            line.Visible = true
+            table.insert(lines, line)
+        end
+    end
+    return lines
+end
+
+-- BUILD TABS
+local function BuildTabs()
+    local yOffset = 20
+    for _, tab in ipairs(Tabs) do
+        if tab.AdminOnly and LocalPlayer.Name ~= ADMIN_USER then continue end
+        local btn = Instance.new("TextButton", SideBar)
+        btn.Size = UDim2.new(0.92, 0, 0, 34)
+        btn.Position = UDim2.new(0.04, 0, 0, yOffset)
+        btn.BackgroundColor3 = tab.Selected and Color3.new(0.15, 0.15, 0.15) or Color3.new(0.07, 0.07, 0.07)
+        btn.BorderColor3 = Color3.new(1, 1, 1)
+        btn.BorderSizePixel = 1
+        btn.Text = tab.Name
+        btn.Font = Enum.Font.GothamSemibold
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.TextSize = 16
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+        TabButtons[tab.Name] = btn
+        btn.MouseButton1Click:Connect(function()
+            CurrentTab = tab.Name
+            for _, t in ipairs(Tabs) do
+                if TabButtons[t.Name] then
+                    TabButtons[t.Name].BackgroundColor3 = Color3.new(0.07, 0.07, 0.07)
+                end
+            end
+            btn.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+            UpdateContent()
+        end)
+        yOffset = yOffset + 40
+    end
+end
+
+-- CLEAR CONTENT
+local function ClearContent()
+    for _, obj in ipairs(ContentFrame:GetChildren()) do
+        if obj:IsA("GuiObject") then obj:Destroy() end
+    end
+end
+
+-- MINIMIZE / CLOSE LOGIC
+MinBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MiniBox.Visible = true
+end)
+MiniBox.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MiniBox.Visible = false
+end)
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+    FOVCircle:Remove()
+    TargetHUD.Visible = false
+    if TargetHighlight then TargetHighlight:Destroy() end
+    ClearTriangles()
+end)
+
+-- CONTENT UPDATE — PREDICTION SECTION REMOVED
+function UpdateContent()
+    ClearContent()
+    local y = 25
+
+    if CurrentTab == "Main" then
+        -- AIMLOCK TOGGLE
+        local AimlockBtn = Instance.new("TextButton", ContentFrame)
+        AimlockBtn.Size = UDim2.new(0.9, 0, 0, 38)
+        AimlockBtn.Position = UDim2.new(0.05, 0, 0, y)
+        AimlockBtn.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+        AimlockBtn.BorderColor3 = Color3.new(1, 1, 1)
+        AimlockBtn.BorderSizePixel = 2
+        AimlockBtn.Text = "AIMLOCK: OFF"
+        AimlockBtn.Font = Enum.Font.GothamBold
+        AimlockBtn.TextColor3 = Color3.new(1, 1, 1)
+        AimlockBtn.TextSize = 18
+        Instance.new("UICorner", AimlockBtn).CornerRadius = UDim.new(0, 6)
+
+        AimlockBtn.MouseButton1Click:Connect(function()
+            AimlockEnabled = not AimlockEnabled
+            AimlockBtn.Text = "AIMLOCK: " .. (AimlockEnabled and "ON" or "OFF")
+            AimlockBtn.BackgroundColor3 = AimlockEnabled and Color3.new(0, 0.35, 0) or Color3.new(0.1, 0.1, 0.1)
+            FOVCircle.Visible = AimlockEnabled
+            if not AimlockEnabled then
+                Target = nil
+                TargetPlayer = nil
+                TargetHUD.Visible = false
+                if TargetHighlight then TargetHighlight:Destroy() TargetHighlight = nil end
+                ClearTriangles()
+            end
+        end)
+        y = y + 50
+
+        -- FOV SETTINGS
+        local FOVLabel = Instance.new("TextLabel", ContentFrame)
+        FOVLabel.Size = UDim2.new(0.9, 0, 0, 28)
+        FOVLabel.Position = UDim2.new(0.05, 0, 0, y)
+        FOVLabel.BackgroundTransparency = 1
+        FOVLabel.Text = "FOV: " .. FOV
+        FOVLabel.Font = Enum.Font.Gotham
+        FOVLabel.TextColor3 = Color3.new(1, 1, 1)
+        FOVLabel.TextSize = 17
+        y = y + 32
+
+        local FOVMinus = Instance.new("TextButton", ContentFrame)
+        FOVMinus.Size = UDim2.new(0.44, 0, 0, 36)
+        FOVMinus.Position = UDim2.new(0.05, 0, 0, y)
+        FOVMinus.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+        FOVMinus.BorderColor3 = Color3.new(1, 1, 1)
+        FOVMinus.BorderSizePixel = 2
+        FOVMinus.Text = "-"
+        FOVMinus.Font = Enum.Font.GothamBold
+        FOVMinus.TextColor3 = Color3.new(1, 1, 1)
+        FOVMinus.TextSize = 20
+        Instance.new("UICorner", FOVMinus).CornerRadius = UDim.new(0, 6)
+        FOVMinus.MouseButton1Click:Connect(function()
+            FOV = math.max(25, FOV - 10)
+            FOVLabel.Text = "FOV: " .. FOV
+        end)
+
+        local FOVPlus = Instance.new("TextButton", ContentFrame)
+        FOVPlus.Size = UDim2.new(0.44, 0, 0, 36)
+        FOVPlus.Position = UDim2.new(0.51, 0, 0, y)
+        FOVPlus.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+        FOVPlus.BorderColor3 = Color3.new(1, 1, 1)
+        FOVPlus.BorderSizePixel = 2
+        FOVPlus.Text = "+"
+        FOVPlus.Font = Enum.Font.GothamBold
+        FOVPlus.TextColor3 = Color3.new(1, 1, 1)
+        FOVPlus.TextSize = 20
+        Instance.new("UICorner", FOVPlus).CornerRadius = UDim.new(0, 6)
+        FOVPlus.MouseButton1Click:Connect(function()
+            FOV = math.min(750, FOV + 10)
+            FOVLabel.Text = "FOV: " .. FOV
+        end)
+        y = y + 48
+
+        -- INFO LABEL
+        local LockInfo = Instance.new("TextLabel", ContentFrame)
+        LockInfo.Size = UDim2.new(0.9, 0, 0, 30)
+        LockInfo.Position = UDim2.new(0.05, 0, 0, y)
+        LockInfo.BackgroundTransparency = 1
+        LockInfo.Text = "🔒 Made by Stuzzy"
+        LockInfo.Font = Enum.Font.GothamBold
+        LockInfo.TextColor3 = Color3.new(1, 0.2, 0.2)
+        LockInfo.TextSize = 16
+        LockInfo.TextWrapped = true
+        y = y + 40
+    end
+end
+-- ADMIN & CREDITS TAB
+local OldUpdateContent = UpdateContent
+function UpdateContent()
+    OldUpdateContent()
+    local y = 25
+    if CurrentTab == "Admin Panel" then
+        ClearContent()
+        local InputLabel = Instance.new("TextLabel", ContentFrame)
+        InputLabel.Size = UDim2.new(0.9, 0, 0, 25)
+        InputLabel.Position = UDim2.new(0.05, 0, 0, y)
+        InputLabel.BackgroundTransparency = 1
+        InputLabel.Text = "Announcement Message:"
+        InputLabel.Font = Enum.Font.GothamSemibold
+        InputLabel.TextColor3 = Color3.new(1, 1, 1)
+        InputLabel.TextSize = 16
+        y = y + 30
+
+        local MessageInput = Instance.new("TextBox", ContentFrame)
+        MessageInput.Size = UDim2.new(0.9, 0, 0, 40)
+        MessageInput.Position = UDim2.new(0.05, 0, 0, y)
+        MessageInput.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+        MessageInput.BorderColor3 = Color3.new(1, 1, 1)
+        MessageInput.BorderSizePixel = 2
+        MessageInput.Text = ""
+        MessageInput.PlaceholderText = "Type any text here..."
+        MessageInput.Font = Enum.Font.Gotham
+        MessageInput.TextColor3 = Color3.new(1, 1, 1)
+        MessageInput.PlaceholderColor3 = Color3.new(0.6, 0.6, 0.6)
+        MessageInput.TextSize = 16
+        MessageInput.TextWrapped = true
+        MessageInput.ClearTextOnFocus = false
+        Instance.new("UICorner", MessageInput).CornerRadius = UDim.new(0, 6)
+        y = y + 50
+
+        local AnnounceBtn = Instance.new("TextButton", ContentFrame)
+        AnnounceBtn.Size = UDim2.new(0.9, 0, 0, 40)
+        AnnounceBtn.Position = UDim2.new(0.05, 0, 0, y)
+        AnnounceBtn.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+        AnnounceBtn.BorderColor3 = Color3.new(1, 1, 1)
+        AnnounceBtn.BorderSizePixel = 2
+        AnnounceBtn.Text = "ANNOUNCE"
+        AnnounceBtn.Font = Enum.Font.GothamBold
+        AnnounceBtn.TextColor3 = Color3.new(1, 1, 1)
+        AnnounceBtn.TextSize = 18
+        Instance.new("UICorner", AnnounceBtn).CornerRadius = UDim.new(0, 6)
+
+        AnnounceBtn.MouseButton1Click:Connect(function()
+            if MessageInput.Text ~= "" then
+                _G.ShowAnnouncement("[ADMIN] " .. MessageInput.Text, 6)
+            end
+        end)
+
+    elseif CurrentTab == "Credits" then
+        ClearContent()
+        local CreditText = Instance.new("TextLabel", ContentFrame)
+        CreditText.Size = UDim2.new(0.9, 0, 0, 180)
+        CreditText.Position = UDim2.new(0.05, 0, 0, y)
+        CreditText.BackgroundTransparency = 1
+        CreditText.Text = [[VERITY SYSTEM ✅
+• Prediction COMPLETELY REMOVED
+• Strict Instant Lock → HEAD ONLY
+• No delay / No smoothing
+• Wall Check Removed
+• Triangle Spam Fixed
+• Clean White Outline ESP
+• Draggable HUD
+• Minimize / Close]]
+        CreditText.Font = Enum.Font.GothamSemibold
+        CreditText.TextColor3 = Color3.new(1, 1, 1)
+        CreditText.TextSize = 16
+        CreditText.TextWrapped = true
+    end
+end
+
+-- TARGET DETECTION — HEAD ONLY
+local function GetBestTarget()
+    local closest, bestDist = nil, math.huge
+    local bestPlayer = nil
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr == LocalPlayer then continue end
+        local char = plr.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then continue end
+        local hum = char:FindFirstChild("Humanoid")
+        local part = char:FindFirstChild("Head") -- ONLY HEAD
+        if not hum or not part or hum.Health <= 0 or hum.Health <= MIN_LOCK_HP then continue end
+
+        local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+        if not onScreen or pos.Z < 0 then continue end
+
+        local dist = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
+        if dist < FOV and dist < bestDist then
+            closest, bestDist = part, dist
+            bestPlayer = plr
+        end
+    end
+    return closest, bestPlayer
+end
+
+-- UPDATE HUD
+local function UpdateTargetHUD(plr, hum, part)
+    if not plr or not hum or not part then
+        TargetHUD.Visible = false
+        return
+    end
+    TargetHUD.Visible = true
+    NameLabel.Text = plr.Name
+    AvatarImage.Image = GetAvatarUrl(plr.UserId)
+
+    local hp = hum.Health
+    HealthLabel.Text = string.format("HP: %.0f", hp)
+    StatusLabel.Text = hp <= MIN_LOCK_HP and "DOWN" or "ALIVE"
+    StatusLabel.TextColor3 = hp <= MIN_LOCK_HP and Color3.new(1, 0, 0) or Color3.new(0, 1, 0)
+
+    local distance = (Camera.CFrame.Position - part.Position).Magnitude
+    DistanceLabel.Text = string.format("DIST: %.1fm", distance)
+end
+
+-- MAIN LOOP — INSTANT LOCK, NO PREDICTION
+RunService.RenderStepped:Connect(function()
+    if not AimlockEnabled then
+        TargetHUD.Visible = false
+        ClearTriangles()
+        return
+    end
+
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    FOVCircle.Radius = FOV
+
+    local newTarget, newPlayer = GetBestTarget()
+    if newTarget ~= Target then
+        Target = newTarget
+        TargetPlayer = newPlayer
+        if TargetHighlight then TargetHighlight:Destroy() TargetHighlight = nil end
+        ClearTriangles()
+
+        if Target and TargetPlayer then
+            TargetHighlight = Instance.new("Highlight")
+            TargetHighlight.FillTransparency = 1
+            TargetHighlight.OutlineTransparency = 0
+            TargetHighlight.OutlineColor = Color3.new(1, 1, 1)
+            TargetHighlight.Adornee = Target.Parent
+            TargetHighlight.Parent = Target.Parent
+        end
+    end
+
+    if Target and TargetPlayer then
+        local hum = Target.Parent:FindFirstChild("Humanoid")
+        if hum and hum.Health > MIN_LOCK_HP then
+            UpdateTargetHUD(TargetPlayer, hum, Target)
+            -- INSTANT LOCK, NO PREDICTION, NO DELAY
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, Target.Position)
+
+            -- CLEAN ROTATING TRIANGLE
+            ClearTriangles()
+            local time = os.clock()
+            TargetTriangles = {Draw3DTriangle(Target.Position, 2.2, time * 3)}
+        else
+            Target = nil
+            TargetPlayer = nil
+            TargetHUD.Visible = false
+            ClearTriangles()
+            if TargetHighlight then TargetHighlight:Destroy() TargetHighlight = nil end
+        end
+    else
+        TargetHUD.Visible = false
+        ClearTriangles()
+    end
+end)
+
+-- INITIALIZE
+BuildTabs()
+UpdateContent()
+_G.ShowAnnouncement("✅ VERITY | PREDICTION REMOVED", 3)
